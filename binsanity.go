@@ -49,8 +49,9 @@ import (
 // go file in the current directory is used to define the package; if none
 // is found then the package is assumed to be "main".
 //
-// If importpath is the empty string, pkg is used.  Note that except for
-// main, this is unlikely to yield a useful result.
+// If importpath is the empty string, a guess is made based on the assumption
+// that destfile's directory is a package directory in a standard Go source
+// directory, e.g. $GOPATH/src.  If this fails an error is returned.
 //
 // Paths are stripped of their prefixes up to the srcdir and converted to
 // slash format when stored as asset names.
@@ -96,10 +97,11 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 
 	pkg, err = getPkg(pkg)
 	if err != nil {
-		return fmt.Errorf("Error finding package name or import path: %v", err)
+		return fmt.Errorf("Error finding package name: %v", err)
 	}
-	if importpath == "" {
-		importpath = pkg
+	importpath, err = getImportPath(importpath, destfile)
+	if err != nil {
+		return fmt.Errorf("Error finding import path: %v", err)
 	}
 
 	// Create the package file.
@@ -129,19 +131,18 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 	}
 
 	// Create the test file and write it:
-	imports := []string{"testing", importpath} // must be ordered.
-	sort.Strings(imports)
 	tfile := strings.TrimSuffix(destfile, ".go") + "_test.go"
 	tf := fmt.Sprintf("// %s - auto-generated; edit at thine own peril!\n",
 		filepath.Base(tfile))
 	tf += "//\n// More info: https://github.com/biztos/binsanity\n\n"
 	tf += fmt.Sprintf("package %s_test\n\n", pkg)
 	tf += "import (\n"
-	for _, p := range imports {
-		tf += fmt.Sprintf("\t\"%s\"\n", p)
-	}
+	tf += "\t\"fmt\"\n"
+	tf += "\t\"testing\"\n"
+	tf += "\n"
+	tf += fmt.Sprintf("\t\"%s\"\n", importpath)
 	tf += ")\n"
-	tf += fmt.Sprintf(testFuncs, pkg)
+	tf += fmt.Sprintf(testFuncs, pkg, pkg, pkg, pkg, pkg, pkg, pkg)
 	if err := ioutil.WriteFile(tfile, []byte(tf), os.ModePerm); err != nil {
 		return fmt.Errorf("Error writing test file to %s: %v", tfile, err)
 	}
@@ -184,6 +185,36 @@ func getPkg(pkg string) (string, error) {
 
 }
 
+func getImportPath(importpath, destfile string) (string, error) {
+
+	if importpath != "" {
+		return importpath, nil
+	}
+
+	abspath, _ := filepath.Abs(filepath.Dir(destfile))
+
+	// Ideally we might just have this in our GOPATH (which can be many).
+	gopaths := filepath.SplitList(os.Getenv("GOPATH"))
+	for _, p := range gopaths {
+		agp, _ := filepath.Abs(p)
+		src := filepath.Join(agp, "src")
+		if strings.HasPrefix(abspath, src) {
+			ipath := strings.TrimPrefix(strings.TrimPrefix(abspath, src),
+				string(filepath.Separator))
+			return ipath, nil
+		}
+	}
+
+	// Failing the GOPATH solution, what is worth trying?  We could walk
+	// up the directory tree looking for "src" but then why would that
+	// not be in your GOPATH?  It doesn't seem like there's a sane option
+	// here that will not be wrong a lot, and sometimes-wrong is worse than
+	// a predictable error.
+	return "", fmt.Errorf("Path %s not found under $GOPATH %s",
+		abspath, os.Getenv("GOPATH"))
+
+}
+
 var pkgFuncs = `
 // Asset returns the byte content of the asset for the given name, or an error
 // if no such asset is available.
@@ -211,11 +242,76 @@ func AssetNames() []string {
 
 `
 
-// NOTE: this requires N substitutions in Sprintf, all of the pkg.
+// NOTE: this requires 7 substitutions in Sprintf, all of the pkg.
 var testFuncs = `
-
 func TestAssetNames(t *testing.T) {
 	names := %s.AssetNames()
 	t.Log(names)
+}
+
+func TestAsset(t *testing.T) {
+
+	// Not found:
+	missing := "---* no such asset we certainly hope *---"
+	_, err := %s.Asset(missing)
+	if err == nil {
+		t.Fatal("No error for missing asset.")
+	}
+	if err.Error() != "Asset "+missing+" not found" {
+		t.Fatal("Wrong error for missing asset: ", err.Error())
+	}
+
+	// Found (each one):
+	for _, name := range %s.AssetNames() {
+		// NOTE: it would be nice to test the non-zero sizes but it's possible
+		// to have empty files, so...
+		_, err := %s.Asset(name)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	}
+}
+
+func TestMustAsset(t *testing.T) {
+
+	// Not found:
+	missing := "---* no such asset we certainly hope *---"
+	exp := "Asset ---* no such asset we certainly hope *--- not found"
+	panicky := func() { %s.MustAsset(missing) }
+	AssertPanicsWith(t, panicky, exp, "panic for not found")
+
+	// Found (each one):
+	for _, name := range %s.AssetNames() {
+		// NOTE: it would be nice to test the non-zero sizes but it's possible
+		// to have empty files, so...
+		_ = %s.MustAsset(name)
+	}
+}
+
+// For a more useful version of this see: https://github.com/biztos/testig
+func AssertPanicsWith(t *testing.T, f func(), exp string, msg string) {
+
+	panicked := false
+	got := ""
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicked = true
+				got = fmt.Sprintf("%%s", r)
+			}
+		}()
+		f()
+	}()
+
+	if !panicked {
+		t.Fatalf("Function did not panic: %%s", msg)
+	} else if got != exp {
+
+		t.Fatalf("Panic not as expected: %%s\n  expected: %%s\n    actual: %%s",
+			msg, exp, got)
+	}
+
+	// (In go testing, success is silent.)
+
 }
 `

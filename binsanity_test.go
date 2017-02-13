@@ -14,15 +14,19 @@ import (
 )
 
 func Test_Process_Basic(t *testing.T) {
-	dir, err := ioutil.TempDir("", "binsanity_test_")
+	dir, err := ioutil.TempDir("test", "binsanity_test_")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
+	pkg := "bstest"
 	src := filepath.Join("test", "files")
-	// err = binsanity.Process(src, "bstest", dir)
-	err = binsanity.Process(src, "bstest", "", "test/bstest.go")
+	destfile := filepath.Join(dir, "bstest")
+
+	// We don't actually know our import path so we might as well guess.
+	// (No idea how this will play with CI, but Travis will let us know.)
+	err = binsanity.Process(src, pkg, "", destfile)
 	if err != nil {
 		t.Fatal(err)
 	}
