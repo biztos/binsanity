@@ -5,6 +5,7 @@
 package binsanity_test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -352,4 +353,178 @@ func RunTestsInDir(t *testing.T, dir string) error {
 
 	return nil
 
+}
+
+func Test_ParseArgs_Version(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p", "-v"}
+
+	binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != 0 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+
+	if errs := err.String(); errs != "" {
+		t.Fatalf("Got standard error: %s", errs)
+	}
+	outs := out.String()
+	if outs != "binsanity version 0.1.0\n" {
+		t.Fatalf("Got unexpected standard output: %s", outs)
+	}
+}
+
+func Test_ParseArgs_Help(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p", "-h"}
+
+	binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != 0 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+
+	if errs := err.String(); errs != "" {
+		t.Fatalf("Got standard error: %s", errs)
+	}
+
+	// Let's not actually test the help text content right now, hm?
+	outs := out.String()
+	if outs == "" {
+		t.Fatal("Got nothing on standard output.")
+	}
+}
+
+func Test_ParseArgs_NoArgs(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p"}
+
+	binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != 1 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+	if outs := out.String(); outs != "" {
+		t.Fatalf("Got standard output: %s", outs)
+	}
+	errs := err.String()
+	if errs != "Source dir required. Usage: binsanity [options] ASSETDIR\n" {
+		t.Fatalf("Got unexpected standard error: %s", errs)
+	}
+}
+
+func Test_ParseArgs_BadArg(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p", "--nope"}
+
+	binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != 1 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+	if outs := out.String(); outs != "" {
+		t.Fatalf("Got standard output: %s", outs)
+	}
+	errs := err.String()
+	if errs != "Bad option: --nope. Usage: binsanity [options] ASSETDIR\n" {
+		t.Fatalf("Got unexpected standard error: %s", errs)
+	}
+}
+
+func Test_ParseArgs_TwoDirs(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p", "first", "second"}
+
+	binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != 1 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+	if outs := out.String(); outs != "" {
+		t.Fatalf("Got standard output: %s", outs)
+	}
+	errs := err.String()
+	if errs != "Too many source dirs. Usage: binsanity [options] ASSETDIR\n" {
+		t.Fatalf("Got unexpected standard error: %s", errs)
+	}
+}
+
+func Test_ParseArgs_AllSet(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p", "--import=imp", "--package=pkg", "--output=out",
+		"srcdir"}
+
+	res := binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != -1 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+	if outs := out.String(); outs != "" {
+		t.Fatalf("Got standard output: %s", outs)
+	}
+	if errs := err.String(); errs != "" {
+		t.Fatalf("Got standard error: %s", errs)
+	}
+	if len(res) != 4 {
+		t.Fatalf("Got wrong-sized return: %v", res)
+	}
+	if res[0] != "srcdir" {
+		t.Fatalf("Got wrong srcdir to pass to Process: %s", res[0])
+	}
+	if res[1] != "pkg" {
+		t.Fatalf("Got wrong package to pass to Process: %s", res[1])
+	}
+	if res[2] != "imp" {
+		t.Fatalf("Got wrong import to pass to Process: %s", res[2])
+	}
+	if res[3] != "out" {
+		t.Fatalf("Got wrong destfile to pass to Process: %s", res[3])
+	}
+}
+
+func Test_ParseArgs_SrcOnly(t *testing.T) {
+
+	var out bytes.Buffer
+	var err bytes.Buffer
+	exited := -1
+	exit := func(c int) { exited = c }
+	args := []string{"p", "srcdir"}
+
+	res := binsanity.ParseArgs(args, exit, &out, &err)
+	if exited != -1 {
+		t.Fatalf("Wrong exit code: %d", exited)
+	}
+	if outs := out.String(); outs != "" {
+		t.Fatalf("Got standard output: %s", outs)
+	}
+	if errs := err.String(); errs != "" {
+		t.Fatalf("Got standard error: %s", errs)
+	}
+	if len(res) != 4 {
+		t.Fatalf("Got wrong-sized return: %v", res)
+	}
+	if res[0] != "srcdir" {
+		t.Fatalf("Got wrong srcdir to pass to Process: %s", res[0])
+	}
+	if res[1] != "" || res[2] != "" || res[3] != "" {
+		t.Fatalf("Got unexpected data to pass to Process: %v", res)
+	}
 }

@@ -30,6 +30,7 @@ package binsanity
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -173,6 +174,130 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 	// for something this hastily written.
 	return nil
 
+}
+
+// ParseArgs parses command-line arguments such as os.Args, and returns the
+// arguments to pass to Process.  If it encounters any error, it exits with
+// a nonzero value though the exit function, which usually should be os.Exit.
+// The --version and --help strings (-v and -h) result in the appropriate
+// message going to stdout, followed by an exit with 0.  Errors are printed
+// to stderr.
+//
+// Accepted options are:
+//    -i --import=IMPORT_PATH
+//    -p --package=PACKAGE_NAME
+//    -o --output=OUTPUT_FILE
+//
+// The return slice always has four elements if exit was not called, and zero
+// elements if it was.
+func ParseArgs(args []string, exit func(int), stdout, stderr io.Writer) []string {
+
+	// Yes, this is a bit stupid to implement here, but:
+	// 1) I don't want the docopt dependency for this package.
+	// 2) The flags package is a disaster.
+	// 3) I've been thinking about my own docopt thing anyway (bad idea?)
+	version := "binsanity version 0.1.0"
+	usage := "Usage: binsanity [options] ASSETDIR"
+	help := `binsanity -- convert asset files to Go source.
+
+Usage:
+      binsanity [options] ASSETDIR
+      binsanity --version
+      binsanity --help
+
+Options:
+    --import=IMPORT_PATH
+    --package=PACKAGE_NAME
+    --output=OUTPUT_FILE
+    -h --help                   Print this help.
+    -v --version                Print the program version.
+
+The default values will usually work if you are developing in a $GOPATH/src
+directory.
+
+For more information see: https://github.com/biztos/binsanity
+
+Hats off to go-bindata for doing the much more powerful version of this thing
+first.  If you aren't too sensitive about testing you should probably use
+go-bindata instead: https://godoc.org/github.com/jteeuwen/go-bindata
+`
+	// Look for help, version.
+	args = args[1:]
+	for _, a := range args {
+		if a == "-v" || a == "--version" {
+			fmt.Fprintln(stdout, version)
+			exit(0)
+			return nil
+		}
+		if a == "-h" || a == "--help" {
+			fmt.Fprintln(stdout, help)
+			exit(0)
+			return nil
+		}
+	}
+
+	// Get opts and dir.
+	srcdir := ""
+	opts := map[string]string{
+		"import":  "",
+		"package": "",
+		"output":  "",
+	}
+	long := map[string]string{
+		"--import=":  "import",
+		"--package=": "package",
+		"--output=":  "output",
+	}
+	for _, a := range args {
+
+		if strings.HasPrefix(a, "--") {
+			// It's an opt!
+			ok := false
+			for k, v := range long {
+				if strings.HasPrefix(a, k) {
+					ok = true
+					opts[v] = strings.TrimPrefix(a, k)
+				}
+			}
+			if !ok {
+				fmt.Fprintf(stderr, "Bad option: %s. %s\n", a, usage)
+				exit(1)
+				return nil
+			}
+
+		} else if srcdir == "" {
+			srcdir = a
+		} else {
+			fmt.Fprintln(stderr, "Too many source dirs.", usage)
+			exit(1)
+			return nil
+		}
+	}
+	if srcdir == "" {
+		fmt.Fprintln(stderr, "Source dir required.", usage)
+		exit(1)
+		return nil
+	}
+
+	return []string{
+		srcdir,
+		opts["package"],
+		opts["import"],
+		opts["output"],
+	}
+
+}
+
+// RunApp is a convenience wrapper around ParseArgs and Process.  If Process
+// returns an error it is written to stderr and the program exits with a
+// nonzero code via exit.
+func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
+
+	parsed := ParseArgs(args, exit, stdout, stderr)
+	if err := Process(parsed[0], parsed[1], parsed[2], parsed[3]); err != nil {
+		fmt.Fprintln(stderr, err)
+		exit(2)
+	}
 }
 
 func getPkg(pkg, destfile string) (string, error) {
