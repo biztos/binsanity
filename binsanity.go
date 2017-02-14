@@ -49,9 +49,12 @@ import (
 // go file in the current directory is used to define the package; if none
 // is found then the package is assumed to be "main".
 //
-// If importpath is the empty string, a guess is made based on the assumption
-// that destfile's directory is a package directory in a standard Go source
-// directory, e.g. $GOPATH/src.  If this fails an error is returned.
+// If pkg is "main" then no test file is written.
+//
+// If importpath is the empty string and pkg is not "main" then a guess is
+// made based on the assumption that destfile's directory is a package
+// directory in a standard Go source directory, e.g. $GOPATH/src. If this
+// fails an error is returned.
 //
 // Paths are stripped of their prefixes up to the srcdir and converted to
 // slash format when stored as asset names.
@@ -128,6 +131,11 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 	// efficient, but it makes testing this package fairly easy.)
 	if err := ioutil.WriteFile(destfile, []byte(pf), os.ModePerm); err != nil {
 		return fmt.Errorf("Error writing package file to %s: %v", destfile, err)
+	}
+
+	// No tests for main, it's not usually done that way.
+	if pkg == "main" {
+		return nil
 	}
 
 	// Create the test file and write it:
