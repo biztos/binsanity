@@ -46,7 +46,7 @@ import (
 // file exists it is overwritten.
 //
 // If pkg is the empty string, the first "package" statement in the first
-// go file in the current directory is used to define the package; if none
+// go file in the destination directory is used to define the package; if none
 // is found then the package is assumed to be "main".
 //
 // If pkg is "main" then no test file is written.
@@ -69,10 +69,24 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 		return fmt.Errorf("Destination file does not have .go extension: %s",
 			destfile)
 	}
+	if srcdir == "" {
+		srcdir = "."
+	}
+
+	info, err := os.Stat(srcdir)
+	if err != nil {
+		return fmt.Errorf("Source dir: %v", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("Source not a directory: %s", srcdir)
+	}
 
 	fileData := map[string][]byte{}
 
 	walker := func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return nil
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -85,7 +99,7 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 		return nil
 	}
 
-	err := filepath.Walk(srcdir, walker)
+	err = filepath.Walk(srcdir, walker)
 	if err != nil {
 		return fmt.Errorf("Error walking %s: %v", srcdir, err)
 	}
@@ -98,7 +112,7 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 	}
 	sort.Strings(names)
 
-	pkg, err = getPkg(pkg)
+	pkg, err = getPkg(pkg, destfile)
 	if err != nil {
 		return fmt.Errorf("Error finding package name: %v", err)
 	}
@@ -161,13 +175,15 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 
 }
 
-func getPkg(pkg string) (string, error) {
+func getPkg(pkg, destfile string) (string, error) {
 
 	if pkg != "" {
 		return pkg, nil
 	}
 
-	infos, err := ioutil.ReadDir(".")
+	dir := filepath.Dir(destfile)
+
+	infos, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return "", err
 	}
@@ -176,7 +192,7 @@ func getPkg(pkg string) (string, error) {
 		if !strings.HasSuffix(file, ".go") {
 			continue
 		}
-		b, err := ioutil.ReadFile(file)
+		b, err := ioutil.ReadFile(filepath.Join(dir, file))
 		if err != nil {
 			return "", err
 		}
