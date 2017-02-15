@@ -16,13 +16,14 @@ package main
 
 import (
 	"github.com/biztos/binsanity"
+	"io"
 	"os"
 )
 
 var args = os.Args
 var exit = os.Exit
-var stdout = os.Stdout
-var stderr = os.Stderr
+var stdout io.Writer = os.Stdout
+var stderr io.Writer = os.Stderr
 
 func main() {
 	binsanity.RunApp(args, exit, stdout, stderr)

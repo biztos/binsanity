@@ -2,9 +2,7 @@
 
 // Package binsanity encodes files into Go source, with testing.
 //
-// WARNING -- PRE-ALPHA SOFTWARE
-//
-// ** This package probably isn't working yet. **
+// WARNING -- EXPERIMENTAL SOFTWARE -- POSSIBLY BUGGY
 //
 // Inspired by the bindata package, binsanity aims to provide a minimally
 // useful subset of features while also enabiling proper testing of the
@@ -24,6 +22,8 @@
 // * Only the AssetNames, Asset, and MustAsset functions are implemented.
 //
 // * Edge cases, probably numerous, have not been much considered.
+//
+// * Not recommended for large assets or large collections of assets.
 //
 // * Your test coverage will not be reduced. :-)
 package binsanity
@@ -106,6 +106,7 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 			return fmt.Errorf("Error reading %s: %v", path, err)
 		}
 		path = filepath.ToSlash(strings.TrimPrefix(path, srcdir))
+		path = strings.TrimPrefix(path, string(filepath.Separator))
 		fileData[path] = b
 		return nil
 	}
@@ -232,7 +233,7 @@ directory.
 
 For more information see: https://github.com/biztos/binsanity
 
-Hats off to go-bindata for doing the much more powerful version of this thing
+Hats off to Jim Teeuwen for doing the much more powerful version of this thing
 first.  If you aren't too sensitive about testing you should probably use
 go-bindata instead: https://godoc.org/github.com/jteeuwen/go-bindata
 `
@@ -309,10 +310,14 @@ go-bindata instead: https://godoc.org/github.com/jteeuwen/go-bindata
 func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 
 	parsed := ParseArgs(args, exit, stdout, stderr)
-	if err := Process(parsed[0], parsed[1], parsed[2], parsed[3]); err != nil {
-		fmt.Fprintln(stderr, err)
-		exit(2)
+	if len(parsed) > 0 {
+		err := Process(parsed[0], parsed[1], parsed[2], parsed[3])
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			exit(2)
+		}
 	}
+
 }
 
 func getPkg(pkg, destfile string) (string, error) {
