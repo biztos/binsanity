@@ -52,7 +52,7 @@ func Test_Process_ErrorNotImportable(t *testing.T) {
 	}
 
 	exp := "Error finding import path: Path " + absdir +
-		" not found under $GOPATH thisisnotyourregulargopath"
+		" not found under src in $GOPATH thisisnotyourregulargopath"
 
 	if err.Error() != exp {
 		t.Fatalf("Wrong error returned: %v", err)

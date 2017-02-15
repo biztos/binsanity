@@ -369,7 +369,7 @@ func getImportPath(importpath, destfile string) (string, error) {
 	// not be in your GOPATH?  It doesn't seem like there's a sane option
 	// here that will not be wrong a lot, and sometimes-wrong is worse than
 	// a predictable error.
-	return "", fmt.Errorf("Path %s not found under $GOPATH %s",
+	return "", fmt.Errorf("Path %s not found under src in $GOPATH %s",
 		abspath, os.Getenv("GOPATH"))
 
 }
