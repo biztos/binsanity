@@ -127,9 +127,14 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 	if err != nil {
 		return fmt.Errorf("Error finding package name: %v", err)
 	}
-	importpath, err = getImportPath(importpath, destfile)
-	if err != nil {
-		return fmt.Errorf("Error finding import path: %v", err)
+
+	// We only care about the import path if the package isn't main, since
+	// for main we aren't generating any tests.
+	if pkg != "main" {
+		importpath, err = getImportPath(importpath, destfile)
+		if err != nil {
+			return fmt.Errorf("Error finding import path: %v", err)
+		}
 	}
 
 	// Create the package file.

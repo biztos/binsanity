@@ -268,6 +268,77 @@ func Test_Process_AllDefaults(t *testing.T) {
 	}
 }
 
+// If the package is main, no test file is written, and we don't care if
+// it's importable or not.
+func Test_Process_AllDefaultsNotImportable(t *testing.T) {
+
+	// Our temp dir for cleanup; NOTE this is not in $GOPATH.
+	gopath := os.Getenv("GOPATH")
+	defer os.Setenv("GOPATH", gopath)
+	os.Setenv("GOPATH", "thisisnotyourregulargopath")
+	dir, err := ioutil.TempDir("test", "binsanity_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	absdir, _ := filepath.Abs(dir)
+
+	// Default dir is current dir, so let's go there.
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic("failed to Getwd: " + err.Error())
+	}
+	if err := os.Chdir(dir); err != nil {
+		panic("failed to Chdir: " + err.Error())
+	}
+	defer os.Chdir(cwd)
+
+	// While it would probably not be much use, it's totally possible to
+	// build from an empty directory.  Use case might be that you're just
+	// setting up your workflow but don't have any files yet.
+	err = binsanity.Process("", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Let's make sure we have just the one file (no tests for main).
+	infos, err := ioutil.ReadDir(absdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(infos) != 1 {
+		t.Fatalf("Wrong number of files found: %#v", infos)
+	}
+	_, err = os.Stat(filepath.Join(absdir, "binsanity.go"))
+	if err != nil {
+		t.Fatalf("Package file error: %v", err)
+	}
+
+	// Check that it actually has the right package name.
+	b, err := ioutil.ReadFile(filepath.Join(absdir, "binsanity.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	have := false
+	for _, line := range strings.Split(string(b), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line[0:2] == "//" {
+			continue
+		}
+		if line == "package main" {
+			have = true
+			break
+		}
+		if strings.HasPrefix(line, "package ") {
+			t.Fatalf("Wrong package: %s", line)
+		}
+
+	}
+	if !have {
+		t.Fatal("Package not found.")
+	}
+}
+
 func Test_Process_FindPackage(t *testing.T) {
 
 	// Our temp dir for cleanup:
