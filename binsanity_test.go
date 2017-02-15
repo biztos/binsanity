@@ -145,7 +145,7 @@ func Test_Process_Basic(t *testing.T) {
 
 }
 
-func Test_Process_DefaultMain(t *testing.T) {
+func Test_Process_ExplicitMain(t *testing.T) {
 
 	// Our temp dir for cleanup:
 	// (TODO: $ENV option to not clean up.)
@@ -316,6 +316,89 @@ func Test_Process_FindPackage(t *testing.T) {
 	if !have {
 		t.Fatal("Package not found.")
 	}
+}
+
+// Of course I find a bug the first time I run the thing outside my dev host.
+// A symlink to a dir looks like a file, but if you try to read it (the dir)
+// as a file you'll get an error.
+func Test_Process_SymLinkDir(t *testing.T) {
+
+	// Our temp dir:
+	// (TODO: $ENV option to not clean up.)
+	dir, err := ioutil.TempDir("test", "binsanity_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Make another dir inside it:
+	dir2, err := ioutil.TempDir(dir, "target_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	linkSrc, err := filepath.Abs(dir2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// And symlink that:
+	if err := os.Symlink(linkSrc, filepath.Join(dir, "linky")); err != nil {
+		t.Fatal(err)
+	}
+
+	// It's OK to have the source and dest be in the same place, although
+	// it's probably not something you'd do in real life.
+	src := dir
+	destfile := filepath.Join(dir, "bstest.go")
+
+	// Now we can run it and it should give an error until the bug is fixed,
+	// after which it should not.
+	//
+	// Something like this:
+	//     Error walking test/binsanity_test_713708718: Error reading
+	//     test/binsanity_test_713708718/linky: read
+	//     test/binsanity_test_713708718/linky: is a directory
+	err = binsanity.Process(src, "bstest", "", destfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Still here? Let's run the tests!
+	RunTestsInDir(t, dir)
+
+}
+
+// Another goodie: if the symlink is not found we should get a useful
+// error, not a random one.
+func Test_Process_SymLinkNotFound(t *testing.T) {
+
+	// Our temp dir:
+	// (TODO: $ENV option to not clean up.)
+	dir, err := ioutil.TempDir("test", "binsanity_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Symlink something that will not be found:
+	if err := os.Symlink("NOTHING", filepath.Join(dir, "linky")); err != nil {
+		t.Fatal(err)
+	}
+
+	// It's OK to have the source and dest be in the same place, although
+	// it's probably not something you'd do in real life.
+	src := dir
+	destfile := filepath.Join(dir, "bstest.go")
+
+	// Now we can run it and it should give a useful error.
+	err = binsanity.Process(src, "bstest", "", destfile)
+	if err == nil {
+		t.Fatal("No error returned for missing symlink.")
+	}
+	if !strings.HasSuffix(err.Error(), "no such file or directory") {
+		t.Fatalf("Error not as expected: %v", err)
+	}
+
 }
 
 // Run tests with coverage.  Anything other than 100% is an error.

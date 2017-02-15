@@ -8,7 +8,7 @@
 
 // The binsanity program converts asset files to Go source.
 //
-//    go get github.com/biztos/binsanity
+//    go get github.com/biztos/binsanity/...
 //    cd go/src/my-project
 //    binsanity my-assets # binsanity --help for more options
 //    go test -cover

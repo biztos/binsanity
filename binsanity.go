@@ -91,6 +91,16 @@ func Process(srcdir, pkg, importpath, destfile string) error {
 		if info.IsDir() {
 			return nil
 		}
+
+		// It might be a link to a dir, or something missing...
+		realInfo, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+		if realInfo.IsDir() {
+			return nil
+		}
+
 		b, err := ioutil.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("Error reading %s: %v", path, err)
