@@ -70,7 +70,6 @@ func AssetNames() []string {
 
 // this must remain sorted or everything breaks!
 var binsanity_names = []string{
-
 	"bar",
 	"baz/bat/bloopf",
 	"foo",
