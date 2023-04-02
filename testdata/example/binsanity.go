@@ -11,7 +11,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"errors"
-	"io/ioutil"
+	"io"
 	"sort"
 )
 
@@ -27,23 +27,34 @@ func Asset(name string) ([]byte, error) {
 		}
 
 		// Not cached, so decode and cache it.
-		decoded, err := base64.StdEncoding.DecodeString(binsanity_data[i])
-		if err != nil {
-			return nil, err
-		}
-		buf := bytes.NewReader(decoded)
-		gzr, err := gzip.NewReader(buf)
-		if err != nil {
-			return nil, err
-		}
-		data, err := ioutil.ReadAll(gzr)
-		if err != nil {
-			return nil, err
-		}
-		binsanity_cache[name] = data
+		binsanity_cache[name] = InflateAssetData(binsanity_data[i])
+
 	}
 	return binsanity_cache[name], nil
 
+}
+
+// InflateAssetData decodes and gunzips the raw input data, returning it.
+// Panics on error, because the integrity of the data should be guaranteed by
+// the generator.
+func InflateAssetData(raw string) []byte {
+
+	decoded, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		panic(err)
+	}
+	buf := bytes.NewReader(decoded)
+
+	// I have *no* idea how gzip.NewReader might return an error; nor
+	// how calling Close() on the reader would.
+	gzr, _ := gzip.NewReader(buf)
+	defer gzr.Close()
+	data, err := io.ReadAll(gzr)
+	if err != nil {
+		panic(err)
+	}
+
+	return data
 }
 
 // MustAsset returns the byte content of the asset for the given name, or
