@@ -105,22 +105,6 @@ func TestMustAssetStringFound(t *testing.T) {
 
 }
 
-func TestInflateBadEncodingPanics(t *testing.T) {
-
-	exp := "illegal base64 data at input byte 3"
-	panicky := func() { main.InflateAssetData("not base64 anyhow") }
-	AssertPanicsWith(t, panicky, exp, "InflateAssetData (not base64)")
-
-}
-
-func TestInflateBadGzipPanics(t *testing.T) {
-
-	exp := "flate: corrupt input before offset 4"
-	panicky := func() { main.InflateAssetData("H4sICDzjKWR4AMvLL1FIr8os4AIAY4aUAAAA") }
-	AssertPanicsWith(t, panicky, exp, "InflateAssetData (not gzip)")
-
-}
-
 func TestAssetSums(t *testing.T) {
 	var want_tests bool
 	// This is a little bit overkill but people have habits right?

@@ -26,35 +26,22 @@ func Asset(name string) ([]byte, error) {
 			return nil, errors.New("Asset not found.")
 		}
 
+		// We ignore errors because we controlled the data from the begining.
+		// It's not perfect but it seems better than having additional funcs
+		// hanging around that might confuse the user: tried that already, not
+		// nicer.
+		decoded, _ := base64.StdEncoding.DecodeString(binsanity_data[i])
+		buf := bytes.NewReader(decoded)
+		gzr, _ := gzip.NewReader(buf)
+		defer gzr.Close()
+		data, _ := io.ReadAll(gzr)
+
 		// Not cached, so decode and cache it.
-		binsanity_cache[name] = InflateAssetData(binsanity_data[i])
+		binsanity_cache[name] = data
 
 	}
 	return binsanity_cache[name], nil
 
-}
-
-// InflateAssetData decodes and gunzips the raw input data, returning it.
-// Panics on error, because the integrity of the data should be guaranteed by
-// the generator.
-func InflateAssetData(raw string) []byte {
-
-	decoded, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil {
-		panic(err)
-	}
-	buf := bytes.NewReader(decoded)
-
-	// I have *no* idea how gzip.NewReader might return an error; nor
-	// how calling Close() on the reader would.
-	gzr, _ := gzip.NewReader(buf)
-	defer gzr.Close()
-	data, err := io.ReadAll(gzr)
-	if err != nil {
-		panic(err)
-	}
-
-	return data
 }
 
 // MustAsset returns the byte content of the asset for the given name, or
