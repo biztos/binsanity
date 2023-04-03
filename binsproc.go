@@ -42,19 +42,13 @@ func (r *Result) String() string {
 // The test file is named "binsanity_test.go" or the equivalent for the
 // specified file, and provides full coverage of the generated functions.
 //
-// If bintesting is true, simple tests for the content are included.  This
-// will not affect coverage but it will slow testing down.  Its benefit is
-// some small protection against accidental direct edits to the generated
-// files (presumably one would more easily notice a change to the test file!)
-// and, arguably, against pedantic unit-test fanatics like the author. ;-)
-//
 // If either file exists it is overwritten.
 //
 // Paths are stripped of their prefixes up to the dir and converted to
 // slash format when stored as asset names.
 //
 // The first error encountered is returned.
-func Process(dir, pkg, mod, file string, bintesting bool) (*Result, error) {
+func Process(dir, pkg, mod, file string) (*Result, error) {
 
 	var err error
 	if dir == "" {

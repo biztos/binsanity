@@ -44,7 +44,6 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 	var file string
 	var mod string
 	var pkg string
-	var bintest bool
 
 	// cli is pretty good but its error handling is weird (not as weird as
 	// docopt's so there's that). We avoid the craziness of things like
@@ -80,13 +79,6 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 				Destination: &pkg,
 				Required:    false,
 			},
-			&cli.BoolFlag{
-				Name:        "bintest",
-				Aliases:     []string{"b"},
-				Usage:       "include tests for binary data",
-				Destination: &bintest,
-				Required:    false,
-			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			// Surprised this isn't built in to the app spec...
@@ -95,7 +87,7 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 			}
 			dir = cCtx.Args().Get(0)
 
-			res, err := Process(dir, file, mod, pkg, bintest)
+			res, err := Process(dir, file, mod, pkg)
 			if err != nil {
 				return err
 			}
