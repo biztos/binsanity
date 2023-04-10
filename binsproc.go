@@ -5,6 +5,7 @@ package binsanity
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
+	"time"
 )
 
 // Result is returned by Process and records the number of files and total
@@ -26,12 +29,23 @@ func (r *Result) String() string {
 	return fmt.Sprintf("files: %d, bytes: %d", r.Files, r.Bytes)
 }
 
+// GenData holds the data injected into the templates when generating files.
+type GenData struct {
+	Timestamp         time.Time
+	CodeFile          string
+	TestFile          string
+	Package           string
+	Module            string
+	Names             []string
+	DataSums          []string
+	DataStrings       []string
+	ExistingAssetName string
+	MissingAssetName  string
+}
+
 // Process converts all files in dir into readable data in a Go file
-// file belonging to package pkg, within the module path mod ("main"
-// being special); and writes tests for the generated code.
-//
-// Note that mod is the module to be *imported* in the test file, while
-// pkg is the package name to be *declared* in the source file.
+// file belonging to package pkg, and writes tests for the generated code.
+// The test file imports pkg with the import path mod.
 //
 // The file defaults to "binsanity.go" and if not empty, must have ".go"
 // as its extension.
@@ -69,7 +83,7 @@ func Process(dir, pkg, mod, file string) (*Result, error) {
 		}
 	}
 	if mod == "" {
-		mod, err = FindModule(file)
+		mod, err = FindImportPath(file)
 		if err != nil {
 			return nil, err
 		}
@@ -85,15 +99,8 @@ func Process(dir, pkg, mod, file string) (*Result, error) {
 		return nil, fmt.Errorf("Not a directory: %s", dir)
 	}
 
-	// Inputs check out, let's go.
-	res := &Result{}
-	fileData := map[string][]byte{}
-
-	// On the one hand, it's silly to not get the paths first in order and
-	// then get the content for each path one by one so we don't have to
-	// fill up with the memory of every damned thing.  On the other hand,
-	// that's exactly what the generated source file is going to make you do
-	// every single time, so we should be even.
+	// Grab filenames.
+	paths := []string{}
 	walker := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
@@ -111,267 +118,107 @@ func Process(dir, pkg, mod, file string) (*Result, error) {
 			return nil
 		}
 
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("Error reading %s: %v", path, err)
-		}
-		path = filepath.ToSlash(strings.TrimPrefix(path, dir))
-		path = strings.TrimPrefix(path, string(filepath.Separator))
-		fileData[path] = b
+		paths = append(paths, path)
+
 		return nil
 	}
-
 	err = filepath.Walk(dir, walker)
 	if err != nil {
 		return nil, fmt.Errorf("Error walking %s: %v", dir, err)
 	}
+	sort.Strings(paths)
 
-	// We want sorted names for consistency, we have no idea what order the
-	// file system is going to use.  Also, it gives us a neat way to do the
-	// lookups.
-	names := make([]string, len(fileData))
-	idx := 0
-	for k := range fileData {
-		names[idx] = k
-		idx++
+	// Get data for generating the files.
+	tfile := file[:len(file)-3] + "_test.go"
+	gen := &GenData{
+		CodeFile:    file,
+		TestFile:    tfile,
+		Module:      mod,
+		Names:       make([]string, len(paths)),
+		DataSums:    make([]string, len(paths)),
+		DataStrings: make([]string, len(paths)),
 	}
-	sort.Strings(names)
+	total_bytes := 0
+	for idx, path := range paths {
+		// name is cleaned version of path.
+		gen.Names[idx] = strings.TrimPrefix(
+			filepath.ToSlash(strings.TrimPrefix(path, dir)),
+			string(filepath.Separator),
+		)
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("Error reading %s: %v", path, err)
+		}
+		total_bytes += len(b)
 
-	// Create the package file.
-	basename := filepath.Base(file)
-	pf := fmt.Sprintf(fileStart, basename, pkg)
-	for _, n := range names {
-		pf += fmt.Sprintf("\t%q,\n", n)
-	}
-	pf += fileMid
-	for _, n := range names {
+		// sum is of raw bytes.
+		gen.DataSums[idx] = fmt.Sprintf("%x", sha256.Sum256(b))
 
+		// data is compressed.
 		var buf bytes.Buffer
 		writer := gzip.NewWriter(&buf)
 
-		// TODO: figure out how to test this stuff.  Gonna need to wrap the
-		// whole effing FS somehow right?  Because we need to be able to say
-		// e.g. first read succeeds, second read fails, or even third.
-		if _, err := writer.Write(fileData[n]); err != nil {
-			return nil, fmt.Errorf("Error compressing asset %s: %v", n, err)
+		// TODO: (as a general task) figure out how to test this crap and
+		// write it up on a blog or something.  It will keep coming up, and
+		// it's non-idiomatic to ignore the error but also really not obvious
+		// how TF you are supposed to test it without doing some very weird
+		// gymnastics.  Presumably a "compress" function that takes an
+		// interface as its arg, right?  And you write an implementation that
+		// blows up, just for testing.  Yay.  Fuck.  So far so good BUT you
+		// still need to trap that error unless you make it panic... which I
+		// guess is legit in this case, but again not idiomatic... also maybe
+		// worth checking the gzip implementation and see if the writer here
+		// actually *can* return an error, right?
+		if _, err := writer.Write(b); err != nil {
+			return nil, fmt.Errorf("Error compressing asset %s: %v", path, err)
 		}
-
 		if err := writer.Close(); err != nil {
 			return nil, err
 		}
 
-		encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+		gen.DataStrings[idx] = base64.StdEncoding.EncodeToString(buf.Bytes())
 
-		pf += fmt.Sprintf("\t%q,\n", encoded)
-	}
-	pf += fmt.Sprintf(fileEnd, basename)
-
-	// ...and write it.  (Doing it this way is obviously not very memory
-	// efficient, but it makes testing this package fairly easy.)
-	if err := os.WriteFile(file, []byte(pf), os.ModePerm); err != nil {
-		return nil, fmt.Errorf("Error writing source file to %s: %v", file, err)
 	}
 
-	// Create the test file and write it:
-	// REWORK ONCE EXAMPLE AT 100!
-	tfile := strings.TrimSuffix(file, ".go") + "_test.go"
-	tf := fmt.Sprintf("// %s - auto-generated; edit at thine own peril!\n",
-		filepath.Base(tfile))
-	tf += "//\n// More info: https://github.com/biztos/binsanity\n\n"
-	tf += fmt.Sprintf("package %s_test\n\n", pkg)
-	tf += "import (\n"
-	tf += "\t\"fmt\"\n"
-	tf += "\t\"testing\"\n"
-	tf += "\n"
-	tf += fmt.Sprintf("\t\"%s\"\n", mod)
-	tf += ")\n"
-	tf += fmt.Sprintf(testFuncs, pkg, pkg, pkg, pkg, pkg, pkg, pkg, pkg, pkg, pkg)
-	if err := os.WriteFile(tfile, []byte(tf), os.ModePerm); err != nil {
-		return nil, fmt.Errorf("Error writing test file to %s: %v", tfile, err)
+	// Create the code file.
+	ctmpl, err := template.New("binsanity").Parse(tmpl_codeFile)
+	if err != nil {
+		panic(err) // testable how? probably not at all....
 	}
+	cwriter, err := os.Create(file)
+	if err != nil {
+		return nil, err
+	}
+	defer cwriter.Close()
+	err = ctmpl.Execute(cwriter, gen)
+	if err != nil {
+		panic(err)
+	}
+
+	// Some special sauce for the test file:
+	if len(paths) != 0 {
+		gen.ExistingAssetName = gen.Names[int(len(paths)/2)]
+		gen.MissingAssetName = gen.Names[len(paths)-1] + "--NOPE"
+	} else {
+		gen.MissingAssetName = "anything"
+	}
+
+	// Create the test file.
+	// tmpl, err := template.New("binsanity").Parse(tmpl_codeFile)
+	// if err != nil {
+	// 	panic(err) // testable how? probably not at all....
+	// }
+	// err = tmpl.Execute(os.Stdout, gen)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// Done... pending bug reports, of course, which are sort of inevitable
 	// for something this hastily written.
+	res := &Result{
+		Files: len(paths),
+		Bytes: total_bytes,
+	}
 	return res, nil
 
 }
-
-const fileStart = `/* binsanity.go - auto-generated; edit at thine own peril!
-
-More info: https://github.com/biztos/binsanity
-
-*/
-
-package %s
-
-import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
-	"errors"
-	"io/ioutil"
-	"sort"
-
-	%q
-)
-
-// Asset returns the byte content of the asset for the given name, or an error
-// if no such asset is available.
-func Asset(name string) ([]byte, error) {
-
-	_, found := binsanity_cache[name]
-	if !found {
-		i := sort.SearchStrings(binsanity_names, name)
-		if i == len(binsanity_names) || binsanity_names[i] != name {
-			return nil, errors.New("Asset not found.")
-		}
-
-		// Not cached, so decode and cache it.
-		decoded, err := base64.StdEncoding.DecodeString(binsanity_data[i])
-		if err != nil {
-			return nil, err
-		}
-		buf := bytes.NewReader(decoded)
-		gzr, err := gzip.NewReader(buf)
-		if err != nil {
-			return nil, err
-		}
-		data, err := ioutil.ReadAll(gzr)
-		if err != nil {
-			return nil, err
-		}
-		binsanity_cache[name] = data
-	}
-	return binsanity_cache[name], nil
-
-}
-
-// MustAsset returns the byte content of the asset for the given name, or
-// panics if no such asset is available.
-func MustAsset(name string) []byte {
-	b, err := Asset(name)
-	if err != nil {
-		panic(err.Error())
-	}
-	return b
-}
-
-// MustAssetString returns the string content of the asset for the given name,
-// or panics if no such asset is available.  This is a convenience function
-// for string(MustAsset(name)).
-func MustAssetString(name string) string {
-	return string(MustAsset(name))
-}
-
-// AssetNames returns the sorted names of the assets.
-func AssetNames() []string {
-	return binsanity_names
-}
-
-// this must remain sorted or everything breaks!
-var binsanity_names = []string{
-`
-
-const fileMid = `}
-
-// only decode once per asset.
-var binsanity_cache = map[string][]byte{}
-
-// assets are gzipped and base64 encoded. WARNING: long lines may follow!
-var binsanity_data = []string{
-`
-
-const fileEnd = `}
-// END OF %s
-`
-
-// NOTE: this requires 7 substitutions in Sprintf, all of the package name.
-// NOTE: arguably pretty useful to test the actual data, maybe by checksum?
-const testFuncs = `
-func TestAssetNames(t *testing.T) {
-	names := %s.AssetNames()
-	t.Log(names)
-}
-
-func TestAsset(t *testing.T) {
-
-	// Not found:
-	missing := "---* no such asset we certainly hope *---"
-	_, err := %s.Asset(missing)
-	if err == nil {
-		t.Fatal("No error for missing asset.")
-	}
-	if err.Error() != "Asset "+missing+" not found" {
-		t.Fatal("Wrong error for missing asset: ", err.Error())
-	}
-
-	// Found (each one):
-	for _, name := range %s.AssetNames() {
-		// NOTE: it would be nice to test the non-zero sizes but it's possible
-		// to have empty files, so...
-		_, err := %s.Asset(name)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-	}
-}
-
-func TestMustAsset(t *testing.T) {
-
-	// Not found:
-	missing := "---* no such asset we certainly hope *---"
-	exp := "Asset ---* no such asset we certainly hope *--- not found"
-	panicky := func() { %s.MustAsset(missing) }
-	AssertPanicsWith(t, panicky, exp, "panic for not found")
-
-	// Found (each one):
-	for _, name := range %s.AssetNames() {
-		// NOTE: it would be nice to test the non-zero sizes but it's possible
-		// to have empty files, so...
-		_ = %s.MustAsset(name)
-	}
-}
-
-func TestMustAssetString(t *testing.T) {
-
-	// Not found:
-	missing := "---* no such asset we certainly hope *---"
-	exp := "Asset ---* no such asset we certainly hope *--- not found"
-	panicky := func() { %s.MustAssetString(missing) }
-	AssertPanicsWith(t, panicky, exp, "panic for not found")
-
-	// Found (each one):
-	for _, name := range %s.AssetNames() {
-		// NOTE: it would be nice to test the non-zero sizes but it's possible
-		// to have empty files, so...
-		_ = %s.MustAssetString(name)
-	}
-}
-
-// For a more useful version of this see: https://github.com/biztos/testig
-func AssertPanicsWith(t *testing.T, f func(), exp string, msg string) {
-
-	panicked := false
-	got := ""
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicked = true
-				got = fmt.Sprintf("%%s", r)
-			}
-		}()
-		f()
-	}()
-
-	if !panicked {
-		t.Fatalf("Function did not panic: %%s", msg)
-	} else if got != exp {
-
-		t.Fatalf("Panic not as expected: %%s\n  expected: %%s\n    actual: %%s",
-			msg, exp, got)
-	}
-
-	// (In go testing, success is silent.)
-
-}
-`

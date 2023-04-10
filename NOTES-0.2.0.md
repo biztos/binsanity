@@ -28,28 +28,43 @@ Programmatically then:
 
 ## WTF happens with versioned import for package name?
 
+**SOLVED** just append after the /v5 and Go figures it out.
+
 So if you have import path is foo.com/boo/v5 and your subpackage is... hm...
 gonna need to trim off "v" statements I think? Or... well if you provide it
 then it's your own fault and the go.mod shouldn't give it so maybe no problem?
 
 ## Hey what about using constants?
 
-Problem is we would need to decode them, right? Because the constant can
-only be a string, we need to create a Base64 (might as well compress it too)
-of the item and then return that.
+**CHECKED BUT NOT PROVEN** that it doesn't make a noticeable difference in
+the binary size nor in the perceived runtime with a pretty big set -- more
+than you should use this kind of tool for really. Build is slow, execute is
+quite fast. Ergo: **no obvious reason to use constants at this time.**
 
-Fetching would be slower (how much?) _or_ loading would be slower (decode on
-init) _and_ memory would be double (need the const, and the other thing)...
-in order to avoid declaring the map. Plus we would need to have a function
-with a huge switch to catch every constant because we can't eval, duh!
+---
 
-Seems like these are probably worse than giant maps, but I'm not sure.
+Question is, do we have any kind of memory advantage (or other advantage) if
+we do the big file strings as constants instead of a giant-ass array. Could
+bench it I guess.
 
-TODO: benchmark a giant map of this stuff! binsanity $GOPATH or something.
+To do constants would be some like this:
 
 ```go
-var pathHashes = map[string]string{} // foo/bar.txt -> hash(content)
 
-const asfdafafsdafsdds = ...
+const d1 = "base64 encoded stuff"
+const d2 = "more base64 encoded stuff"
 
+func get(name string) (string,error) {
+    switch name: {
+        case "d1":
+            return d1, nil
+        case "d2":
+            return d2, nil
+        default:
+            return "", errors.New("not found")
+    }
+}
 ```
+
+The obviously bad thing here is we then have a massive switch statement,
+because there's no way to address the constant by a variable name.
