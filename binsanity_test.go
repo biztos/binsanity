@@ -1,15 +1,15 @@
-/* {{.TestFile}} - auto-generated; edit at your own peril!
+/* binsanity_test.go - auto-generated; edit at your own peril!
 
 To test the checksums for all content, set the environment variable
 BINSANITY_TEST_CONTENT to one of: Y,YES,T,TRUE,1 (the Truthy Shortlist).
 
 More info: https://github.com/biztos/binsanity
 
-Generated: {{.Timestamp}}
+Generated: 0001-01-01 00:00:00 +0000 UTC
 
 */
 
-package {{.Package}}_test
+package binsanity_test
 
 import (
 	"crypto/sha256"
@@ -18,26 +18,27 @@ import (
 	"strings"
 	"testing"
 
-	"{{.Module}}"
+	"github.com/biztos/binsanity"
 )
 
-const BinsanityAssetMissing = {{printf "%q" .MissingAssetName}}
-const BinsanityAssetPresent = {{printf "%q" .ExistingAssetName}}
-const BinsanityAssetPresentSum = {{printf "%q" .ExistingAssetSum}}
+const BinsanityAssetMissing = "tests.tmpl--NOPE"
+const BinsanityAssetPresent = "tests.tmpl"
+const BinsanityAssetPresentSum = "4faaed29eb3c52f9d587bbb0aadad8690dfe95e07c14fc9a3eff8b216edfcd44"
 
 var BinsanityAssetNames = []string{
-{{if .AssetsEmpty}}	// empty
-{{else}}
-{{range .Names}}	{{printf "%q" .}},
-{{end}}{{end}}}
+
+	"code.tmpl",
+	"tests.tmpl",
+}
 
 var BinsanityAssetSums = []string{
-{{range .DataSums}}	{{printf "%q" .}},
-{{end}}}
+	"dad22db46328ef37e56b714dde7669f6fc7a686c95d028ae970fff52a8425b08",
+	"4faaed29eb3c52f9d587bbb0aadad8690dfe95e07c14fc9a3eff8b216edfcd44",
+}
 
 func TestAssetNames(t *testing.T) {
 
-	names := {{.Package}}.AssetNames()
+	names := binsanity.AssetNames()
 	if len(names) != len(BinsanityAssetNames) {
 		t.Fatalf("Wrong number of names:\n  expected: %d\n  actual: %d",
 			len(BinsanityAssetNames), len(names))
@@ -56,7 +57,7 @@ func TestAssetNames(t *testing.T) {
 
 func TestAssetNotFound(t *testing.T) {
 
-	_, err := {{.Package}}.Asset(BinsanityAssetMissing)
+	_, err := binsanity.Asset(BinsanityAssetMissing)
 	if err == nil {
 		t.Fatal("No error for missing asset.")
 	}
@@ -67,7 +68,7 @@ func TestAssetNotFound(t *testing.T) {
 
 func TestAssetFound(t *testing.T) {
 
-	b, err := {{.Package}}.Asset(BinsanityAssetPresent)
+	b, err := binsanity.Asset(BinsanityAssetPresent)
 	if err != nil {
 		t.Fatal("Error for asset that should not be missing.")
 	}
@@ -80,14 +81,14 @@ func TestAssetFound(t *testing.T) {
 func TestMustAssetNotFound(t *testing.T) {
 
 	exp := "Asset not found."
-	panicky := func() { {{.Package}}.MustAssetString(BinsanityAssetMissing) }
+	panicky := func() { binsanity.MustAssetString(BinsanityAssetMissing) }
 	AssertPanicsWith(t, panicky, exp, "MustAsset (not found)")
 
 }
 
 func TestMustAssetFound(t *testing.T) {
 
-	b := {{.Package}}.MustAsset(BinsanityAssetPresent)
+	b := binsanity.MustAsset(BinsanityAssetPresent)
 	sum := fmt.Sprintf("%x", sha256.Sum256(b))
 	if sum != BinsanityAssetPresentSum {
 		t.Fatal("Wrong sha256 sum for asset data.")
@@ -98,14 +99,14 @@ func TestMustAssetFound(t *testing.T) {
 func TestMustAssetStringNotFound(t *testing.T) {
 
 	exp := "Asset not found."
-	panicky := func() { {{.Package}}.MustAssetString(BinsanityAssetMissing) }
+	panicky := func() { binsanity.MustAssetString(BinsanityAssetMissing) }
 	AssertPanicsWith(t, panicky, exp, "MustAssetString (not found)")
 
 }
 
 func TestMustAssetStringFound(t *testing.T) {
 
-	s := {{.Package}}.MustAssetString(BinsanityAssetPresent)
+	s := binsanity.MustAssetString(BinsanityAssetPresent)
 	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
 	if sum != BinsanityAssetPresentSum {
 		t.Fatal("Wrong sha256 sum for asset data.")
@@ -130,7 +131,7 @@ func TestAssetSums(t *testing.T) {
 		return
 	}
 	for idx, name := range BinsanityAssetNames {
-		b, err := {{.Package}}.Asset(name)
+		b, err := binsanity.Asset(name)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}

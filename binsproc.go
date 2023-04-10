@@ -225,8 +225,8 @@ func Process(cfg *Config) (*Result, error) {
 	}
 
 	// Create the code file.
-	// ctmpl, err := template.New("t").Parse(MustAssetString("code.tmpl"))
-	ctmpl, err := template.New("t").Parse(CTMP)
+	ctmpl, err := template.New("t").Parse(MustAssetString("code.tmpl"))
+	// ctmpl, err := template.New("t").Parse(CTMP)
 	if err != nil {
 		panic(err) // testable how? probably not at all....
 	}
@@ -247,8 +247,8 @@ func Process(cfg *Config) (*Result, error) {
 	gen.MissingAssetName = gen.Names[len(gen.Names)-1] + "--NOPE"
 
 	// Create the test file.
-	// ttmpl, err := template.New("t").Parse(MustAssetString("tests.tmpl"))
-	ttmpl, err := template.New("t").Parse(TTMP)
+	ttmpl, err := template.New("t").Parse(MustAssetString("tests.tmpl"))
+	// ttmpl, err := template.New("t").Parse(TTMP)
 	if err != nil {
 		panic(err) // testable????
 	}

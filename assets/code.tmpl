@@ -6,7 +6,7 @@ Generated: {{.Timestamp}}
 
 */
 
-package main
+package {{.Package}}
 
 import (
 	"bytes"
@@ -65,20 +65,18 @@ func MustAssetString(name string) string {
 
 // AssetNames returns the sorted names of the assets.
 func AssetNames() []string {
-	return binsanity_names
+{{if .AssetsEmpty}}	return []string{}{{else}}	return binsanity_names{{end}}
 }
 
 // this must remain sorted or everything breaks!
 var binsanity_names = []string{
-{{range .Names}}    "{{.}}",
+{{range .Names}}	{{printf "%q" .}},
 {{end}}}
-}
 
 // only decode once per asset.
 var binsanity_cache = map[string][]byte{}
 
 // assets are gzipped and base64 encoded
 var binsanity_data = []string{
-{{range .DataStrings}}    "{{.}}",
+{{range .DataStrings}}	"{{.}}",
 {{end}}}
-}

@@ -72,9 +72,9 @@ func AssetNames() []string {
 {{if .AssetsEmpty}}	return []string{}{{else}}	return binsanity_names{{end}}
 }
 
-// this must re{{.Package}} sorted or everything breaks!
+// this must remain sorted or everything breaks!
 var binsanity_names = []string{
-{{range .Names}}    "{{.}}",
+{{range .Names}}	"{{.}}",
 {{end}}}
 
 // only decode once per asset.
