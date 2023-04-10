@@ -5,6 +5,7 @@ package binsanity
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
@@ -16,6 +17,9 @@ import (
 	"text/template"
 	"time"
 )
+
+const DummyDataString = "H4sIAAAAAAAA/8rP5gIEAAD//30OFtoDAAAA"
+const DummyDataSum = "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22"
 
 // Result is returned by Process and records the number of files and total
 // bytes processed.
@@ -40,29 +44,52 @@ type GenData struct {
 	DataSums          []string
 	DataStrings       []string
 	ExistingAssetName string
+	ExistingAssetSum  string
 	MissingAssetName  string
+	AssetsEmpty       bool
 }
 
-// Process converts all files in dir into readable data in a Go file
-// file belonging to package pkg, and writes tests for the generated code.
-// The test file imports pkg with the import path mod.
+// Config holds the values used in Process, in order to avoid confusion.
+type Config struct {
+	Dir     string
+	Package string
+	File    string
+	Module  string
+}
+
+// Process converts all files in cfg.Dir into readable data in a Go file
+// cfg.File belonging to package cfg.Package, and writes tests for the
+// generated code.  The test file imports cfg.Module.
 //
 // The file defaults to "binsanity.go" and if not empty, must have ".go"
 // as its extension.
 //
-// The values of pkg and mod are guessed by default, assuming a Go Module
-// environment.  If this fails an error is returned.
+// The package and module values are guessed if not provided; a standard Go
+// Module environment is assumed.
 //
 // The test file is named "binsanity_test.go" or the equivalent for the
-// specified file, and provides full coverage of the generated functions.
+// code file, and provides full coverage of the generated functions.
 //
 // If either file exists it is overwritten.
 //
 // Paths are stripped of their prefixes up to the dir and converted to
 // slash format when stored as asset names.
 //
+// In the rare case of *no* assets found in the directory, a single special
+// asset is created in order to achieve test coverage.  Its name is randomized
+// and should not conflict with any real-world data as it begins with 256
+// underscores.
+//
+// This asset is *not* returned by the AssetNames function.
+//
 // The first error encountered is returned.
-func Process(dir, pkg, mod, file string) (*Result, error) {
+func Process(cfg *Config) (*Result, error) {
+
+	// must.. resist... edit-in-place... temptation... :-)
+	dir := cfg.Dir
+	mod := cfg.Module
+	pkg := cfg.Package
+	file := cfg.File
 
 	var err error
 	if dir == "" {
@@ -131,8 +158,9 @@ func Process(dir, pkg, mod, file string) (*Result, error) {
 	// Get data for generating the files.
 	tfile := file[:len(file)-3] + "_test.go"
 	gen := &GenData{
-		CodeFile:    file,
-		TestFile:    tfile,
+		CodeFile:    filepath.Base(file),
+		TestFile:    filepath.Base(tfile),
+		Package:     pkg,
 		Module:      mod,
 		Names:       make([]string, len(paths)),
 		DataSums:    make([]string, len(paths)),
@@ -180,8 +208,25 @@ func Process(dir, pkg, mod, file string) (*Result, error) {
 
 	}
 
+	// Special case for empty assets -- you might want to have an empty set
+	// of assets, but we still want test coverage.
+	if len(paths) == 0 {
+
+		b := make([]byte, 256)
+		rand.Read(b) // more untestable fun...
+
+		name := fmt.Sprintf("%s%x", strings.Repeat("_", 256), b)
+
+		gen.AssetsEmpty = true
+		gen.Names = []string{name}
+		gen.DataStrings = []string{DummyDataString}
+		gen.DataSums = []string{DummyDataSum}
+
+	}
+
 	// Create the code file.
-	ctmpl, err := template.New("binsanity").Parse(tmpl_codeFile)
+	// ctmpl, err := template.New("t").Parse(MustAssetString("code.tmpl"))
+	ctmpl, err := template.New("t").Parse(CTMP)
 	if err != nil {
 		panic(err) // testable how? probably not at all....
 	}
@@ -196,22 +241,26 @@ func Process(dir, pkg, mod, file string) (*Result, error) {
 	}
 
 	// Some special sauce for the test file:
-	if len(paths) != 0 {
-		gen.ExistingAssetName = gen.Names[int(len(paths)/2)]
-		gen.MissingAssetName = gen.Names[len(paths)-1] + "--NOPE"
-	} else {
-		gen.MissingAssetName = "anything"
-	}
+	test_idx := int(len(gen.Names) / 2)
+	gen.ExistingAssetName = gen.Names[test_idx]
+	gen.ExistingAssetSum = gen.DataSums[test_idx]
+	gen.MissingAssetName = gen.Names[len(gen.Names)-1] + "--NOPE"
 
 	// Create the test file.
-	// tmpl, err := template.New("binsanity").Parse(tmpl_codeFile)
-	// if err != nil {
-	// 	panic(err) // testable how? probably not at all....
-	// }
-	// err = tmpl.Execute(os.Stdout, gen)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// ttmpl, err := template.New("t").Parse(MustAssetString("tests.tmpl"))
+	ttmpl, err := template.New("t").Parse(TTMP)
+	if err != nil {
+		panic(err) // testable????
+	}
+	twriter, err := os.Create(tfile)
+	if err != nil {
+		return nil, err
+	}
+	defer twriter.Close()
+	err = ttmpl.Execute(twriter, gen)
+	if err != nil {
+		panic(err)
+	}
 
 	// Done... pending bug reports, of course, which are sort of inevitable
 	// for something this hastily written.

@@ -40,14 +40,11 @@ go-bindata instead: https://pkg.go.dev/github.com/jteeuwen/go-bindata
 // If it encounters any error, it exits with a nonzero value though ExitFunc.
 // Standard output and error are written to OutWriter and ErrWriter.
 func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
-	var dir string
-	var file string
-	var mod string
-	var pkg string
 
 	// cli is pretty good but its error handling is weird (not as weird as
 	// docopt's so there's that). We avoid the craziness of things like
 	// cli.HandleExitCoder(cli.Exit(err, 1)) by doing our own craziness.
+	cfg := &Config{}
 	app := &cli.App{
 		Name:        "binsanity",
 		Usage:       "binasfasdf",
@@ -60,7 +57,7 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 				Aliases:     []string{"o"},
 				Value:       "binsanity.go",
 				Usage:       "output file for generated Go source",
-				Destination: &file,
+				Destination: &(cfg.File),
 				Required:    false,
 			},
 			&cli.StringFlag{
@@ -68,7 +65,7 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 				Aliases:     []string{"m"},
 				Value:       "",
 				Usage:       "module identifier (see description)",
-				Destination: &mod,
+				Destination: &(cfg.Module),
 				Required:    false,
 			},
 			&cli.StringFlag{
@@ -76,7 +73,7 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 				Aliases:     []string{"p"},
 				Value:       "",
 				Usage:       "package name (see description)",
-				Destination: &pkg,
+				Destination: &(cfg.Package),
 				Required:    false,
 			},
 		},
@@ -85,9 +82,9 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 			if cCtx.NArg() != 1 {
 				return errors.New("Single arg required: ASSET_DIR")
 			}
-			dir = cCtx.Args().Get(0)
+			cfg.Dir = cCtx.Args().Get(0)
 
-			res, err := Process(dir, file, mod, pkg)
+			res, err := Process(cfg)
 			if err != nil {
 				return err
 			}

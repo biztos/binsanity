@@ -36,15 +36,15 @@ func FindPackage(path string) (string, error) {
 		return "", err
 	}
 
-	// We want to scan for the first package only.  If you have multiple
-	// package declarations and have not yet cleaned them up, there's no way
-	// for us to guess what you mean.
+	// We want to scan for the first non-test package only.  If you have
+	// multiple package declarations and have not yet cleaned them up, there's
+	// no way for us to guess what you mean.
 	for _, file := range files {
 		pkg, err := ScanForPackage(file)
 		if err != nil {
 			return "", err
 		}
-		if pkg != "" {
+		if pkg != "" && !strings.HasSuffix(pkg, "_test") {
 			return pkg, err
 		}
 	}
@@ -211,7 +211,6 @@ func FindImportPath(file string) (string, error) {
 	mdir := dir
 	mpath := filepath.Join(mdir, "go.mod")
 	for b == nil && mdir != "/" {
-		fmt.Println(mpath)
 		// Same overhead as Stat anyway for failure case:
 		b, err = os.ReadFile(mpath)
 		if os.IsNotExist(err) {
