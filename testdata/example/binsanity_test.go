@@ -1,6 +1,13 @@
-// OK, as long as we're here... need to have a way of skipping the content
-// checks UNLESS we have some env var set. Because choosing to test content
-// hashes at build is stupid.
+/* binsanity_test.go - auto-generated; edit at your own peril!
+
+To test the checksums for all content, set the environment variable
+BINSANITY_TEST_CONTENT to one of: Y,YES,T,TRUE,1 (the Truthy Shortlist).
+
+More info: https://github.com/biztos/binsanity
+
+Generated: 0001-01-01 00:00:00 +0000 UTC
+
+*/
 
 package main_test
 
@@ -11,27 +18,31 @@ import (
 	"strings"
 	"testing"
 
-	main "biztos.com/example"
+	"biztos.com/example"
 )
 
-const BinsanityAssetMissing = "foo:NOPE" // derived from below
-const BinsanityAssetPresent = "foo"      // last one
+const BinsanityAssetMissing = "foo--NOPE"
+const BinsanityAssetPresent = "baz/bat/bloopf"
+const BinsanityAssetPresentSum = "4fed59a4fcf97d28970b4a46c5eb52fc6ce9336fab8248073a6ba7c7b49aef59"
 
 var BinsanityAssetNames = []string{
+
 	"bar",
 	"baz/bat/bloopf",
 	"foo",
 }
-var BinsanityAssetSum = map[string]string{
-	"bar":            "947f16f7a547deb1e5d8aa2896cfa00a4903edcae955ec60437bd55de3070c83",
-	"baz/bat/bloopf": "2800577c6cda3f97123f9de49b40c0463e8f0c7435f88b66bdca622252dc8c05",
-	"foo":            "544df7e68ae9ffcdb7d9d48a844214962812a8bb94eccd1d65fda808e4369ca0",
+
+var BinsanityAssetSums = []string{
+	"45aab2edbbcaeaea205a0789171a3a6841296b18e3594b706bfd4f30debfd89f",
+	"4fed59a4fcf97d28970b4a46c5eb52fc6ce9336fab8248073a6ba7c7b49aef59",
+	"782507ceeb536a4051b22c4941aade018d777e3511dfc27598574ab328126112",
 }
 
 func TestAssetNames(t *testing.T) {
+
 	names := main.AssetNames()
 	if len(names) != len(BinsanityAssetNames) {
-		t.Fatalf("Wrong number of names:\n  expected: %d\n    actual: %d",
+		t.Fatalf("Wrong number of names:\n  expected: %d\n  actual: %d",
 			len(BinsanityAssetNames), len(names))
 	}
 
@@ -39,7 +50,7 @@ func TestAssetNames(t *testing.T) {
 	// generated files!
 	for idx, n := range names {
 		if n != BinsanityAssetNames[idx] {
-			t.Fatalf("Mismatch at %d:\n  expected: %s\n    actual: %s",
+			t.Fatalf("Mismatch at %d:\n  expected: %s\n  actual: %s",
 				idx, BinsanityAssetNames[idx], n)
 		}
 	}
@@ -64,7 +75,7 @@ func TestAssetFound(t *testing.T) {
 		t.Fatal("Error for asset that should not be missing.")
 	}
 	sum := fmt.Sprintf("%x", sha256.Sum256(b))
-	if sum != BinsanityAssetSum[BinsanityAssetPresent] {
+	if sum != BinsanityAssetPresentSum {
 		t.Fatal("Wrong sha256 sum for asset data.")
 	}
 }
@@ -81,7 +92,7 @@ func TestMustAssetFound(t *testing.T) {
 
 	b := main.MustAsset(BinsanityAssetPresent)
 	sum := fmt.Sprintf("%x", sha256.Sum256(b))
-	if sum != BinsanityAssetSum[BinsanityAssetPresent] {
+	if sum != BinsanityAssetPresentSum {
 		t.Fatal("Wrong sha256 sum for asset data.")
 	}
 
@@ -99,7 +110,7 @@ func TestMustAssetStringFound(t *testing.T) {
 
 	s := main.MustAssetString(BinsanityAssetPresent)
 	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
-	if sum != BinsanityAssetSum[BinsanityAssetPresent] {
+	if sum != BinsanityAssetPresentSum {
 		t.Fatal("Wrong sha256 sum for asset data.")
 	}
 
@@ -117,20 +128,21 @@ func TestAssetSums(t *testing.T) {
 	}
 	flag := strings.ToUpper(os.Getenv("BINSANITY_TEST_CONTENT"))
 	want_tests = boolish[flag]
-	if want_tests {
-		for name, exp := range BinsanityAssetSum {
-			b, err := main.Asset(name)
-			if err != nil {
-				t.Fatalf("%s: %v", name, err)
-			}
-			sum := fmt.Sprintf("%x", sha256.Sum256(b))
-			if sum != exp {
-				t.Fatalf("Wrong sha256 sum for data of: %s\n  expected: %s\n    actual: %s",
-					name, exp, sum)
-			}
-		}
-	} else {
+	if !want_tests {
 		t.Skip()
+		return
+	}
+	for idx, name := range BinsanityAssetNames {
+		b, err := main.Asset(name)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		exp := BinsanityAssetSums[idx]
+		sum := fmt.Sprintf("%x", sha256.Sum256(b))
+		if sum != exp {
+			t.Fatalf("Wrong sha256 sum for data of: %s\n  expected: %s\n    actual: %s",
+				name, exp, sum)
+		}
 	}
 }
 

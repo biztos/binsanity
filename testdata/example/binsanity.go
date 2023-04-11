@@ -1,6 +1,8 @@
-/* binsanity.go - auto-generated; edit at thine own peril!
+/* binsanity.go - auto-generated; edit at your own peril!
 
 More info: https://github.com/biztos/binsanity
+
+Generated: 0001-01-01 00:00:00 +0000 UTC
 
 */
 
@@ -78,7 +80,7 @@ var binsanity_cache = map[string][]byte{}
 
 // assets are gzipped and base64 encoded
 var binsanity_data = []string{
-	"H4sIAEa1KWQAA0tKLFLILFZISiziAgD2TYYNCwAAAA==",
-	"H4sIAGG1KWQAA0tKrFLILFZISiwBUzn5+QVpXADkmDgmFQAAAA==",
-	"H4sIABxMKWQAA0vLz1fILFZIy8/nAgCgfYmECwAAAA==",
+	"H4sIAAAAAAAA/0pKLFLILFZISizi4gIEAAD///fXBGYMAAAA",
+	"H4sIAAAAAAAA/0pKrFLILFZISiwBUzn5+QVpXFyAAAAA//9qGJaVFgAAAA==",
+	"H4sIAAAAAAAA/0rLz1fILFZIy8/n4gIEAAD//wYsheQMAAAA",
 }
