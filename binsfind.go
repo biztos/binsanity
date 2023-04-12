@@ -28,6 +28,10 @@ func FindPackage(path string) (string, error) {
 
 	abspath, err := filepath.Abs(path)
 	if err != nil {
+		// TOCOVER - needs mock or ignore error
+		// To test this without a direct mock we would need to make it so you
+		// can't get the Cwd, and which call that is depends on the OS, so:
+		// screw it, mock it.
 		return "", err
 	}
 	dir := filepath.Dir(abspath)
@@ -42,10 +46,11 @@ func FindPackage(path string) (string, error) {
 	for _, file := range files {
 		pkg, err := ScanForPackage(file)
 		if err != nil {
+			// TOCOVER - ReadDir mock should do this as well, give bad file
 			return "", err
 		}
-		if pkg != "" && !strings.HasSuffix(pkg, "_test") {
-			return pkg, err
+		if pkg != "" {
+			return pkg, nil
 		}
 	}
 
@@ -73,7 +78,7 @@ func ValidIdent(s string) bool {
 }
 
 // GoFilesBySize returns a list of paths for Go source files paths in dir,
-// sorted by file size.
+// sorted by file size.  Test files are ignored.
 func GoFilesBySize(dir string) ([]string, error) {
 
 	// We want to look at files smallest-first because we could have very
@@ -91,14 +96,14 @@ func GoFilesBySize(dir string) ([]string, error) {
 		if !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
+		if strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
 
-		// The super annoying part of this race condition is that we will
-		// presumably get nil back (since FileInfo is an interface, you can
-		// do that) and so have to check for the race *ANYWAY* even if it's
-		// almost impossible to test.  Gonna have to come up with some other
-		// mockable function for ReadDir I guess.  Grrr...
 		info, err := entry.Info()
 		if err != nil {
+			// TOCOVER - probably just mock ReadDir as DirReader interface.
+			// FileInfo is an interface so not too hard.
 			return nil, fmt.Errorf("FS race condition on %s: %s", entry.Name(), err)
 		}
 		infos = append(infos, info)
@@ -196,8 +201,7 @@ func FindImportPath(file string) (string, error) {
 	// Find our nearest go.mod if we have one.
 	abspath, err := filepath.Abs(file)
 	if err != nil {
-		// yeah... this is just setting ourselves up for testing misery.
-		// how is this ever triggered?! gonna need to look that up in src...
+		// TOCOVER - needs mock or ignore error
 		return "", err
 	}
 	dir := filepath.Dir(abspath)
