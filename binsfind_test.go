@@ -11,12 +11,6 @@ import (
 	"github.com/biztos/binsanity"
 )
 
-var ExampleDir = filepath.Join("testdata", "example")
-var ExampleSubDir = filepath.Join(ExampleDir, "sub")
-var ExampleAssetDir = filepath.Join(ExampleDir, "assets")
-var NonesuchDir = filepath.Join("testdata", "nope")
-var ScanDir = filepath.Join("testdata", "scan")
-
 func TestFindImportPathErrRoot(t *testing.T) {
 
 	assert := assert.New(t)
