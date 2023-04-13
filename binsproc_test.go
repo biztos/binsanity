@@ -2,6 +2,7 @@
 package binsanity_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -60,11 +61,36 @@ func TestProcessErrAssetDirNotDir(t *testing.T) {
 	assert := assert.New(t)
 
 	cfg := &binsanity.Config{
-		Dir:  filepath.Join(ExampleDir, "main.go"),
-		File: "foo.go",
+		Dir: filepath.Join(ExampleDir, "main.go"),
 	}
 
 	_, err := binsanity.Process(cfg)
-	assert.ErrorContains(err, "ot a directory")
+	assert.ErrorContains(err, "Not a directory")
+
+}
+
+func TestProcessErrFindPackage(t *testing.T) {
+
+	assert := assert.New(t)
+
+	cfg := &binsanity.Config{
+		Dir:  ExampleAssetDir,
+		File: filepath.Join(NonesuchDir, "foo.go"),
+	}
+	_, err := binsanity.Process(cfg)
+	assert.True(os.IsNotExist(err))
+
+}
+
+func TestProcessErrFindImportPath(t *testing.T) {
+
+	assert := assert.New(t)
+
+	cfg := &binsanity.Config{
+		Dir:  ExampleAssetDir,
+		File: filepath.Join(string(filepath.Separator), "foo.go"),
+	}
+	_, err := binsanity.Process(cfg)
+	assert.ErrorContains(err, "No go.mod file found.")
 
 }
