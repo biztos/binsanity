@@ -1,4 +1,4 @@
-module github.com/biztos/binsanity
+module github.com/biztos/binsanity/v1
 
 go 1.12
 
