@@ -2,7 +2,7 @@
 
 Asset files into golang source, with testing! Inspired by [go-bindata][gbd].
 
-[![GoDoc][docbadge]][doc][![Coverage Status][covbadge]][cov]
+[![GoDoc][docbadge]][doc] [![Coverage Status][covbadge]][cov]
 
 [docbadge]: https://pkg.go.dev/badge/github.com/biztos/binsanity.svg
 [doc]: https://pkg.go.dev/github.com/biztos/binsanity
