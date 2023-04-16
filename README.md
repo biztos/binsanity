@@ -1,94 +1,59 @@
 # binsanity
 
-## CURRENTLY BROKEN BUT BIG UPDATE COMING VERY SOON!
+Asset files into golang source, with testing! Inspired by [go-bindata][gbd].
 
-Assets into golang source, with testing!
+[![GoDoc][docbadge]][doc][![Coverage Status][covbadge]][cov]
 
-[![GoDoc][b1]][doc] [![Build Status][b2]][ci] [![Coverage Status][b3]][cov]
-
-[b1]: https://godoc.org/github.com/biztos/binsanity?status.svg
-[doc]: https://godoc.org/github.com/biztos/binsanity
-[b2]: https://travis-ci.org/biztos/binsanity.svg?branch=master
-[ci]: https://travis-ci.org/biztos/binsanity
-[b3]: https://coveralls.io/repos/github/biztos/binsanity/badge.svg
+[docbadge]: https://pkg.go.dev/badge/github.com/biztos/binsanity.svg
+[doc]: https://pkg.go.dev/github.com/biztos/binsanity
+[covbadge]: https://coveralls.io/repos/github/biztos/binsanity/badge.svg
 [cov]: https://coveralls.io/github/biztos/binsanity
+[gbd]: https://github.com/jteeuwen/go-bindata
 
-    $ go get -u github.com/biztos/binsanity/...
-    $ cd $GOPATH/src/my-project
-    $ cat my-assets/foo.txt
-    I am foo!
-    $ cat mypkg.go
-    package mypkg
+You usually interact directly with the command-line application:
 
-    func Foo() string {
-        return string(MustAsset("foo.txt"))
-    }
-    $ cat mypkg_test.go
-    package mypkg_test
+```bash
+$ go get -u github.com/biztos/binsanity/v1/...
+$ binsanity --help
+```
 
-    import (
-        "testing"
-        "my-project"
-    )
+For information on the Go package itself, please refer to the official
+[documentation][doc].
 
-    func TestFoo(t *testing.T) {
-        if mypkg.Foo() == "" {
-            t.Fatal("no foo")
-        }
-    }
-    $ binsanity my-assets
-    $ go test -cover
-    PASS
-    coverage: 100.0% of statements
-    ok      my-project  0.002s
-
-This is a work in progress. Inspired by [go-bindata][gbd], which is awesome
-but not very testing-friendly.
-
-## Warning - Experimental Software!
-
-I wrote this because I needed a subset of [go-bindata][gbd] functionality and
-also needed full test coverage.
-
-It is not thouroughly tested itself, and probably has bugs. Use at your own
-risk, obviously. Bug reports are welcome via the Github project page.
-
-Also note that **asset data is not compressed.**
+**Please use version v1 or higher, earlier versions may not work with `go.mod`.**
 
 ## Using binsanity
 
-Normally you will only interact with the `binsanity` command, which will be
-built in your `$GOPATH/bin` directory after you get it using:
+Specify your asset directory, and `binsanity` will create two files for you:
+a source file and a test file. The test file provides 100% coverage of the
+source file.
 
-    go get -u github.com/biztos/binsanity/...
+```bash
+$ cd src/mypkg
+$ binsanity my-asset-dir
+$ go test -cover .
+ok      github.com/you/mypkg 0.012s  coverage: 100.0% of statements
+```
 
-For most cases, you simply run it in your project source directory, with a
-single argument: the directory holding your asset files.
+You can pass custom values for the output file, package name, and module
+(imported for testing). By default the source file will be `binsanity.go` and
+the test file will `binsanity_test.go`; the package and module are taken from
+your project directory.
 
-These will be encoded into a file `binsanity.go` which will have full
-coverage through the `binsanity_test.go` file. The package name will be
-whatever is used in your other project files, or `main` if none is found. (If
-the package is `main` then no test file will be generated.)
-
-The behavior can be made explicit via command-line options:
-
-- `--package=PKG` -- use PKG instead of guessing the package name.
-- `--import=PATH` -- use PATH instead of guessing the packag import path.
-- `--output=FILE` -- write package to FILE instead of `binsanity.go`.
-
-The package file will define the following functions:
+The generated source file defines the following functions:
 
 - `AssetNames() []string` -- return a list of all asset names.
 - `Asset(name string) ([]byte,error)` -- return data for an asset.
 - `MustAsset(name string) []byte` -- as above, but panic on errors.
+- `MustAssetString(name string) string` -- as above, but for strings.
 
-These behave as in [go-bindata][gbd]. For most common use-cases you will
-want to use `MustAsset`, since you already know what assets you have:
+Note that the design of `binsanity` is probably not conducive to very large
+asset collections. Data is compressed, but also Base64-encoded; and the
+lookup and caching system is fast but could potentially more than double your
+memory usage. If you are very worried about efficiency, you should not use
+`binsanity`. But if you are more interested in convenience and test coverage,
+then you probably should. :-)
 
-    if opts.Help {
-        fmt.Printf("%s", MustAsset("help.md"))
-    }
-
-[gbd]: https://github.com/jteeuwen/go-bindata
+Issues are welcome if they are reproducible.
 
 Good luck, and _design for testing!_

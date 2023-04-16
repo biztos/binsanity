@@ -87,7 +87,7 @@ func TestRunAppOkVersion(t *testing.T) {
 
 	binsanity.RunApp(args)
 	assert.False(exited, "did not exit through func")
-	assert.Equal("binsanity version v0.2.0\n", stdout.String(), "stdout")
+	assert.Equal("binsanity version v1.0.0\n", stdout.String(), "stdout")
 	assert.Equal("", stderr.String(), "stderr")
 }
 

@@ -25,7 +25,7 @@ func TestMainVersion(t *testing.T) {
 
 	got_out := stdout.String()
 	got_err := stderr.String()
-	exp_out := "binsanity version v0.2.0\n"
+	exp_out := "binsanity version v1.0.0\n"
 	exp_err := ""
 	if got_out != exp_out {
 		t.Errorf("stdout:\ngot: %s\nexp: %s", got_out, exp_out)

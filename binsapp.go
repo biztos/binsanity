@@ -16,7 +16,7 @@ var ExitFunc = os.Exit              // exit function, override for testing
 var OutWriter io.Writer = os.Stdout // Standard Output, override for testing
 var ErrWriter io.Writer = os.Stderr // Standard Error, override for testing
 
-const Version = "v0.2.0"
+const Version = "v1.0.0"
 
 const AppDescription = `Convert asset files to Go source with test coverage.
 
