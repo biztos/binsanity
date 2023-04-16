@@ -2,6 +2,7 @@
 package binsanity_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +11,40 @@ import (
 
 	"github.com/biztos/binsanity"
 )
+
+func TestFindPackageErrAbs(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// filepath.Abs actually *can* fail but it's mostly down to the equivalent
+	// of Cwd() not working due to permissions.  So we hack-mock in the Golang
+	// idiom!
+	binsanity.FilePathAbs = func(path string) (string, error) {
+		return "", errors.New("absfail")
+	}
+	defer RestoreDefaults()
+
+	_, err := binsanity.FindPackage("anything")
+	assert.ErrorContains(err, "absfail")
+
+}
+
+func TestFindImportPathErrAbs(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// filepath.Abs actually *can* fail but it's mostly down to the equivalent
+	// of Cwd() not working due to permissions.  So we hack-mock in the Golang
+	// idiom!
+	binsanity.FilePathAbs = func(path string) (string, error) {
+		return "", errors.New("absfail")
+	}
+	defer RestoreDefaults()
+
+	_, err := binsanity.FindImportPath("anything")
+	assert.ErrorContains(err, "absfail")
+
+}
 
 func TestFindImportPathErrRoot(t *testing.T) {
 

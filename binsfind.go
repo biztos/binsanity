@@ -17,6 +17,8 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
+var FilePathAbs = filepath.Abs
+
 // FindPackage attempts to figure out what package we are in, using a brazenly
 // insufficient heuristic: the first package declaration in a go source file
 // in the target directory; or the name of the directory; or "main" if that
@@ -26,12 +28,8 @@ import (
 // declaration when generated.
 func FindPackage(path string) (string, error) {
 
-	abspath, err := filepath.Abs(path)
+	abspath, err := FilePathAbs(path)
 	if err != nil {
-		// TOCOVER - needs mock or ignore error
-		// To test this without a direct mock we would need to make it so you
-		// can't get the Cwd, and which call that is depends on the OS, so:
-		// screw it, mock it.
 		return "", err
 	}
 	dir := filepath.Dir(abspath)
@@ -199,9 +197,8 @@ func ScanForPackage(path string) (string, error) {
 func FindImportPath(file string) (string, error) {
 
 	// Find our nearest go.mod if we have one.
-	abspath, err := filepath.Abs(file)
+	abspath, err := FilePathAbs(file)
 	if err != nil {
-		// TOCOVER - needs mock or ignore error
 		return "", err
 	}
 	dir := filepath.Dir(abspath)

@@ -13,7 +13,7 @@ Asset files into golang source, with testing! Inspired by [go-bindata][gbd].
 You usually interact directly with the command-line application:
 
 ```bash
-$ go get -u github.com/biztos/binsanity/v1/...
+$ go get -u github.com/biztos/binsanity/...
 $ binsanity --help
 ```
 

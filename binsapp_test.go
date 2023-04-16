@@ -33,6 +33,8 @@ func TestRunAppErrNoDirArg(t *testing.T) {
 	binsanity.OutWriter = stdout
 	binsanity.ErrWriter = stderr
 
+	defer RestoreDefaults()
+
 	binsanity.RunApp(args)
 	assert.True(exited, "exited")
 	assert.Equal(1, exit_code, "exit 1")
@@ -59,6 +61,8 @@ func TestRunAppErrDirNotExist(t *testing.T) {
 	binsanity.OutWriter = stdout
 	binsanity.ErrWriter = stderr
 
+	defer RestoreDefaults()
+
 	binsanity.RunApp(args)
 	assert.True(exited, "exited")
 	assert.Equal(1, exit_code, "exit 1")
@@ -84,6 +88,8 @@ func TestRunAppOkVersion(t *testing.T) {
 	binsanity.ExitFunc = exit
 	binsanity.OutWriter = stdout
 	binsanity.ErrWriter = stderr
+
+	defer RestoreDefaults()
 
 	binsanity.RunApp(args)
 	assert.False(exited, "did not exit through func")
@@ -117,6 +123,8 @@ func TestRunAppOk(t *testing.T) {
 	binsanity.ExitFunc = exit
 	binsanity.OutWriter = stdout
 	binsanity.ErrWriter = stderr
+
+	defer RestoreDefaults()
 
 	binsanity.RunApp(args)
 	assert.False(exited, "did not exit through func")
