@@ -20,8 +20,6 @@ $ binsanity --help
 For information on the Go package itself, please refer to the official
 [documentation][doc].
 
-**Please use version v1 or higher, earlier versions may not work with `go.mod`.**
-
 ## Using binsanity
 
 Specify your asset directory, and `binsanity` will create two files for you:
