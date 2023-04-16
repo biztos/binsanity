@@ -5,7 +5,7 @@ BINSANITY_TEST_CONTENT to one of: Y,YES,T,TRUE,1 (the Truthy Shortlist).
 
 More info: https://github.com/biztos/binsanity
 
-Generated: 0001-01-01 00:00:00 +0000 UTC
+Generated: 
 
 */
 
@@ -23,7 +23,7 @@ import (
 
 const BinsanityAssetMissing = "tests.tmpl--NOPE"
 const BinsanityAssetPresent = "tests.tmpl"
-const BinsanityAssetPresentSum = "4faaed29eb3c52f9d587bbb0aadad8690dfe95e07c14fc9a3eff8b216edfcd44"
+const BinsanityAssetPresentSum = "28d9727f67e3b6331835e5f5efc21c03ce3adc1282fc811a2a2ba423c10afe0f"
 
 var BinsanityAssetNames = []string{
 
@@ -32,8 +32,8 @@ var BinsanityAssetNames = []string{
 }
 
 var BinsanityAssetSums = []string{
-	"dad22db46328ef37e56b714dde7669f6fc7a686c95d028ae970fff52a8425b08",
-	"4faaed29eb3c52f9d587bbb0aadad8690dfe95e07c14fc9a3eff8b216edfcd44",
+	"1f01e03fd202d278a592550035c31a5e5972ec7d31c24b2be5af653ee2280cbb",
+	"28d9727f67e3b6331835e5f5efc21c03ce3adc1282fc811a2a2ba423c10afe0f",
 }
 
 func TestAssetNames(t *testing.T) {

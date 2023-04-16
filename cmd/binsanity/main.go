@@ -8,23 +8,17 @@
 
 // The binsanity program converts asset files to Go source.
 //
-//    go get github.com/biztos/binsanity/...
-//    cd go/src/my-project
-//    binsanity my-assets # binsanity --help for more options
-//    go test -cover
+//	go get github.com/biztos/binsanity/...
+//	cd go/src/my-project
+//	binsanity my-assets # binsanity --help for more options
+//	go test -cover
 package main
 
 import (
 	"github.com/biztos/binsanity"
-	"io"
 	"os"
 )
 
-var args = os.Args
-var exit = os.Exit
-var stdout io.Writer = os.Stdout
-var stderr io.Writer = os.Stderr
-
 func main() {
-	binsanity.RunApp(args, exit, stdout, stderr)
+	binsanity.RunApp(os.Args)
 }

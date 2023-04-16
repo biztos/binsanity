@@ -15,7 +15,6 @@ import (
 	"sort"
 	"strings"
 	"text/template"
-	"time"
 )
 
 const DummyDataString = "H4sIAAAAAAAA/8rP5gIEAAD//30OFtoDAAAA"
@@ -35,7 +34,6 @@ func (r *Result) String() string {
 
 // GenData holds the data injected into the templates when generating files.
 type GenData struct {
-	Timestamp         time.Time
 	CodeFile          string
 	TestFile          string
 	Package           string

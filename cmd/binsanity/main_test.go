@@ -30,7 +30,7 @@ func TestMain(t *testing.T) {
 	if out := serr.String(); out != "" {
 		t.Fatalf("wrote to stderr: %s", out)
 	}
-	if out := sout.String(); out != "binsanity version 0.1.0\n" {
+	if out := sout.String(); out != "binsanity version v0.2.0\n" {
 		t.Fatalf("wrote wrong output to stdout: %s", out)
 	}
 

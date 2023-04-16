@@ -11,11 +11,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var ExitFunc = os.Exit    // exit function, override for testing
-var OutWriter = os.Stdout // Standard Output, override for testing
-var ErrWriter = os.Stderr // Standard Error, override for testing
+var ExitFunc = os.Exit              // exit function, override for testing
+var OutWriter io.Writer = os.Stdout // Standard Output, override for testing
+var ErrWriter io.Writer = os.Stderr // Standard Error, override for testing
 
-const Version = "binsanity v0.2.0"
+const Version = "v0.2.0"
 
 const AppDescription = `Convert asset files to Go source with test coverage.
 
@@ -39,7 +39,7 @@ go-bindata instead: https://pkg.go.dev/github.com/jteeuwen/go-bindata
 //
 // If it encounters any error, it exits with a nonzero value though ExitFunc.
 // Standard output and error are written to OutWriter and ErrWriter.
-func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
+func RunApp(args []string) {
 
 	// cli is pretty good but its error handling is weird (not as weird as
 	// docopt's so there's that). We avoid the craziness of things like
@@ -47,10 +47,12 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 	cfg := &Config{}
 	app := &cli.App{
 		Name:        "binsanity",
-		Usage:       "binasfasdf",
+		Usage:       "embed assets with testing",
 		UsageText:   "binsanity [options] ASSET_DIR",
 		Description: AppDescription,
 		Version:     Version,
+		Writer:      OutWriter,
+		ErrWriter:   ErrWriter,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "output",
@@ -95,7 +97,7 @@ func RunApp(args []string, exit func(int), stdout, stderr io.Writer) {
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(args); err != nil {
 		fmt.Fprintln(ErrWriter, err)
 		ExitFunc(1)
 	}

@@ -5,8 +5,6 @@ BINSANITY_TEST_CONTENT to one of: Y,YES,T,TRUE,1 (the Truthy Shortlist).
 
 More info: https://github.com/biztos/binsanity
 
-Generated: 0001-01-01 00:00:00 +0000 UTC
-
 */
 
 package main_test
