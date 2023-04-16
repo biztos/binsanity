@@ -7,31 +7,31 @@ package main
 import (
 	"bytes"
 	"testing"
+
+	"github.com/biztos/binsanity"
 )
 
-func TestMain(t *testing.T) {
+func TestMainVersion(t *testing.T) {
 
-	// Rig up the fake io:
-	exited := -1
-	var sout bytes.Buffer
-	var serr bytes.Buffer
-	exit = func(c int) { exited = c }
-	stdout = &sout
-	stderr = &serr
-	args = []string{"program", "--version"}
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
 
-	// Run it in the simplest form possible:
+	binsanity.OutWriter = stdout
+	binsanity.ErrWriter = stderr
+
+	binsanity.Args = []string{"appname", "--version"}
+
 	main()
 
-	// Check our results, just to be thorough:
-	if exited != 0 {
-		t.Fatal("nonzero exit for --version")
+	got_out := stdout.String()
+	got_err := stderr.String()
+	exp_out := "binsanity version v0.2.0\n"
+	exp_err := ""
+	if got_out != exp_out {
+		t.Errorf("stdout:\ngot: %s\nexp: %s", got_out, exp_out)
 	}
-	if out := serr.String(); out != "" {
-		t.Fatalf("wrote to stderr: %s", out)
-	}
-	if out := sout.String(); out != "binsanity version v0.2.0\n" {
-		t.Fatalf("wrote wrong output to stdout: %s", out)
+	if got_err != exp_err {
+		t.Errorf("stdout:\ngot: %s\nexp: %s", got_err, exp_err)
 	}
 
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var Args = os.Args                  // used by cmd/binsanity, override...
 var ExitFunc = os.Exit              // exit function, override for testing
 var OutWriter io.Writer = os.Stdout // Standard Output, override for testing
 var ErrWriter io.Writer = os.Stderr // Standard Error, override for testing

@@ -1,24 +1,17 @@
 // cmd/binsanity/main.go -- the binsanity executable.
-//
-// NOTE: contrary to my general inclination I am not including anything
-// here that's not in the standard library, as this program's utility
-// is pretty broad (if it exists at all).
-//
-// TODO: more options! Tests!
 
 // The binsanity program converts asset files to Go source.
 //
 //	go get github.com/biztos/binsanity/...
-//	cd go/src/my-project
+//	cd path/to/my-project
 //	binsanity my-assets # binsanity --help for more options
 //	go test -cover
 package main
 
 import (
 	"github.com/biztos/binsanity"
-	"os"
 )
 
 func main() {
-	binsanity.RunApp(os.Args)
+	binsanity.RunApp(binsanity.Args) // <-- os.Args by default
 }
